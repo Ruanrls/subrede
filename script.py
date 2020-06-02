@@ -6,7 +6,7 @@ import re as regex
 import os
 from time import sleep
 
-print "Em desenvolvimento...\nFatores futuramente implementados:\n\t + Multi threading, refatoracao e organizacao do codigo, aperfeicoamento de resultado, argparse, help, path to file, output, outras configuracoes e atualizacoes futuras diversas..."
+print "Em desenvolvimento...\nFatores futuramente implementados:\n\t + Multi threading, tratamento de erros, refatoracao e organizacao do codigo, aperfeicoamento de resultado, argparse, help, path to file, output, outras configuracoes e atualizacoes futuras diversas..."
 sleep(5)
 os.system('clear') or None
 print "Running..."
