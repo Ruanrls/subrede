@@ -124,3 +124,5 @@ for each in ips:
 
 for each in finished:
     print "{}/{}\n".format(each.address, str(each.netmask))
+
+print len(finished)

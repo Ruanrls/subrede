@@ -1,29 +1,32 @@
-10.147.184.87
-10.147.184.80
-10.147.184.71
-10.147.184.65
-10.147.184.55
-10.147.184.52
-10.147.184.32
-10.147.184.27
-10.147.184.25
-10.147.184.252
-10.147.184.239
-10.147.184.239
-10.147.184.235
-10.147.184.228
-10.147.184.227
-10.147.184.199
-10.147.184.191
-10.147.184.190
-10.147.184.190
-10.147.184.183
-10.147.184.181
-10.147.184.169
-10.147.184.165
-10.147.184.159
-10.147.184.159
-10.147.184.157
-10.147.184.157
-10.147.184.128
-10.147.184.122
+OBS: Nota-se que no ip abaixo, poderia ser utilizado como máscara /27
+entretando seria disponibilizado 30 ips, sendo que neste intervalo seria utilizado apenas
+o próprio IP, e portanto 
+
+OBS: Nota-se que no ip abaixo na /27 poderia-se usar mas na faixa de ip da rede
+somente ele seria incluso e perderia-se 29 ips, sendo assim se utiliza-lo como /32 
+
+
+Address (Host or Network)	Netmask (i.e. 24)	Netmask for sub/supernet (optional)
+10.158.151.17/27
+move to: 
+
+Address:   10.158.151.17
+Netmask:   255.255.255.224 = 27
+Wildcard:  0.0.0.31
+Network:   10.158.151.0/27
+Broadcast: 10.158.151.31
+HostMin:   10.158.151.1
+HostMax:   10.158.151.30
+Hosts/Net: 30
+
+Address (Host or Network)	Netmask (i.e. 24)	Netmask for sub/supernet (optional)
+10.158.151.17/32
+
+Address:   10.158.151.17
+Netmask:   255.255.255.255 = 32
+Wildcard:  0.0.0.0
+Network:   10.158.151.17/32
+Broadcast: 10.158.151.17
+HostMin:   10.158.151.17
+HostMax:   10.158.151.17
+Hosts/Net: 1
