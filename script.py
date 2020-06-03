@@ -14,7 +14,8 @@ except Exception as error:
 try:
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--file', help='Path to file with the list of IPS', required=True)
-    parser.add_argument('-o', '--output', help='Path of file to output', action='store_true')
+    parser.add_argument('-o', '--output', help='Path of file to output', action='store', default=None)
+    parser.add_argument('-v', '--verbose', help='Increase the verbosity of program', action='store_true')
 
     args = parser.parse_args()
 
@@ -105,13 +106,30 @@ def verified(ip, netmask, broadcast, network):
     ips_to_verify.append(ip+'/'+str(netmask))
     ip_verified.append(ipform(ip, netmask, broadcast, network))
 
-def err(string, module):
-    print "Error on module: {}\n[-] {}\nQuitting...".format(module, string)
+def err(string):
+    print "Error on module:\n[-] {}\nQuitting...".format(string)
     sleep(5)
     exit(0)
 
+def output(path):
+    #try:
+    global ip_verified
+
+    with open(path, 'a') as file:
+        for each in ip_verified:
+            file.write("Address:\t{}/{}\tNetwork:\t{}\tBroadcast:\t{}\n".format(each.ip, each.netmask, each.network, each.broadcast))
+    #except:
+    #    print "Failed to save in file... Printing the output\n"
+    #    printing()
+
+def printing():
+    global ip_verified
+
+    for each in ip_verified:
+        print "\tAddress:\t{}/{}\tNetwork:\t{}\tBroadcast:\t{}".format(each.ip, each.netmask, each.network, each.broadcast)
 #MAIN
 try:
+    print "Running..."
     ip_verified = []
     ips = ordene(catchip(args.file))#RETURN THE LIST OF IPS IN THIS PATH FILE
     ips_to_verify = []
@@ -153,7 +171,13 @@ try:
             l_network = data['Network']
             netmask += 1
 
-    for each in ip_verified:
-        print "\tAddress:\t{}/{}\tNetwork:\t{}\tBroadcast:\t{}".format(each.ip, each.netmask, each.network, each.broadcast)
+    if args.output == None:
+        printing()
+    else:
+        output(args.output)
+        if args.verbose == True:
+            printing()
+        print "Finished..."
+
 except Exception as error:
     err(str(error))
