@@ -1,128 +1,159 @@
 #!/bin/python
 
-#=============imports=============#
-import requests
-import re as regex
-import os
-from time import sleep
+#   IMPORTANT MODULES
+try:
+    import requests
+    import argparse
+    import re as regex
+    from time import sleep
+    import os
+except Exception as error:
+    err(str(error))
 
-print "Em desenvolvimento...\nFatores futuramente implementados:\n\t + Multi threading, tratamento de erros, refatoracao e organizacao do codigo, aperfeicoamento de resultado, argparse, help, path to file, output, outras configuracoes e atualizacoes futuras diversas..."
-sleep(5)
-os.system('clear') or None
-print "Running..."
+#   ARGUMENT PARSES
+try:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-f', '--file', help='Path to file with the list of IPS', required=True)
+    parser.add_argument('-o', '--output', help='Path of file to output', action='store_true')
 
-#=============functions=============#
-def catchips():
-    aux = open('ips.txt', 'r').readlines()
+    args = parser.parse_args()
 
-    ips = []#list of ips
-    ips_unique = []#list of ordened unique ips
+except Exception as error:
+    err(str(error))
 
-    for each in aux:#adding every ips in the array
-        ips.append(each.strip().split('.'))#splitted in 4 octets
-
-    ips.sort(key=last)#sort the list of ips
-
-    for i in ips:
-        aux = '.'.join(i)#auxiliary variable
-        if aux not in ips_unique:#if the current ip not in the new array, append it
-            ips_unique.append(aux)#add in new array
+#   READ FILE OF IPS AND RETURN THE ARRAY CONTAINING THE IPS WHITOUT \n
+def catchip(path):
+    ips = []
+    with open(path, 'r') as file:
+        for ip in file:
+            ips.append(ip.strip())
     
-    return ips_unique
+    return ips
 
-def last(e):#function that return a last octect as key to sort function
-    return int(e[:][3])
+#TO ORDENE THE LIST OF IPS, WE NEED TO COMPARE THE LAST OCTECT  AND REMOVE THE DUPLICATES
+def ordene(ips):
+    def split(octect):
+        return int(octect.split('.')[3])# this    each.split('.')[3]   return  192.168.0.100 -> (100)
 
-def mask(ip, netmask):
-    #Parameters are sended by url (GET)
-    url = 'http://jodies.de/ipcalc?host={}&mask1={}&mask2='.format(ip, netmask)
-    resp = requests.get(url)
+    ip = set(ips)
+    return sorted(ip, key=split)
 
-    #find a touple (name, ip) -> (netmask, 255.255.255.0)
-    re = r'(\w+/?\w+):\s+</font><font color=\"#0000ff\">(\d+\.\d+\.\d+\.\d+\s=\s\d+|\d+\.?\d+\.\d+\.\d+/?\d?\d?|\d+)'
-    data = regex.findall(re, resp.text)
+#CALCULATE THE INFORMATIONS OF IP, FILTER THAT RESPONSE AND RETURN
+def calculate(ip, netmask):
 
-    return data
+    def filter(data):
+        re = r'(\w+/?\w+):\s+</font><font color=\"#0000ff\">(\d+\.\d+\.\d+\.\d+\s=\s\d+|\d+\.?\d+\.\d+\.\d+/?\d?\d?|\d+)'
+        data = regex.findall(re, data)
 
-def verbroad(network, broadcast, ips_unique):
-    #check if the network and broadcast address is in list ip
-    n = b = False
-    if network in ips_unique:
-        n = True
-    if broadcast in ips_unique:
-        b = True
+        return dict(data)
 
-    return (n,b)
+    url = 'http://jodies.de/ipcalc'
+    payload = {
+        'host':ip,
+        'mask1':netmask,
+        'mask2':''
+    }
+    data = requests.get(url, params=payload)
 
-def verify(minhost, maxhost, ips_unique):
+    return filter(data.text)
+
+#VERIFY IF ALREADY HAVE THIS IP WITH THIS NETMASK IN THE VERIFIED LIST OF IPS
+def verbroad(ip):
+    global ips_to_verify
+
+    if ip in ips_to_verify:
+        return True
+    else:
+        return False
+
+#CLASS THAT DEFINE WHAT IS IP
+class ipform():
+    def __init__(self, ip, netmask, broadcast, network):
+        self.ip = ip
+        self.netmask = netmask
+        self.broadcast = broadcast
+        self.network = network
+
+#RETURN A LIST WITH THE HOSTS THAT CAN BE IN THE NETMASK OF THE CURRENT IP 
+def interval(minhost, maxhost, ips):
     aux = []
-    for each in ips_unique:#for each ip
-        each = each.split('.')
-        #compare if the last octect is lower then other
-        if int(each[3]) >= int(minhost.split('.')[3]) and int(each[3]) <= int(maxhost.split('.')[3]):
-            aux.append('.'.join(each))
-        #if the ip is in interval appends it
-        elif int(each[3]) > int(minhost.split('.')[3]):
-            #if not, we can break.. because the array are ordened, and dont have more values that we are able to append
+    for ip in ips:
+        if minhost.split('.')[3] <= ip.split('.')[3] <= maxhost.split('.')[3]:
+           aux.append(ip) 
+        elif minhost.split('.')[3] > maxhost.split('.')[3]:
             break
+
     return aux
 
-class ip():
-    def __init__(self, address, netmask):
-        self.address = address
-        self.netmask = netmask
+#VERIFY IF THE IP HAVE ITSELF AS BROADCAST OR NETWORK (RETURN A TOUPLE WITH F OR T)
+def selfbroad(address, netmask, broadcast, network):
+    b = n = False
 
-#=============main=============#
-ips = catchips()
-finished = []
+    if address+'/'+str(netmask) == network:
+        n = True
+    
+    if address == broadcast:
+        b = True
+    
+    return (n, b)
 
-for each in ips:
-    #control variables
-    netmask = 32
-    last_nhost = 0
+#adds the ips that pass every condition into the correct list
+def verified(ip, netmask, broadcast, network):
+    global ips_to_verify
+    global ip_verified
 
-    #the range of netmasks ([27, 32[)
-    for i in range(27, 33):
-        data        = mask(each, i)
-        address     = data[0][1]
-        network     = data[3][1].split('/')[0]
-        broadcast   = data[4][1]
-        minhost     = data[5][1]
-        maxhost     = data[6][1]
-        numhost     = int(data[7][1])
+    ips_to_verify.append(ip+'/'+str(netmask))
+    ip_verified.append(ipform(ip, netmask, broadcast, network))
 
-        #verify if the network or broadcast is in list of ip
-        n, b = verbroad(network, broadcast, ips)
-        #verify the amount of ips that we have in the netmask interval
-        ips_in_range = verify(minhost, maxhost, ips)
-        rg = len(ips_in_range)
-        
-        #if the ip in the /27 network and ip are equals, all the nexts netmaks will be.. then we can set loopback (/32)
-        if i == 27 and (network == address or rg == 1):
-            netmask = 32
-            break
-        
-        #if the network or broadcast ip of this netmask is in the ip list, we can't use that, then... continue in the next
-        if n or b:
-            continue
+def err(string, module):
+    print "Error on module: {}\n[-] {}\nQuitting...".format(module, string)
+    sleep(5)
+    exit(0)
 
-        #if the last number of hosts in the netmask interval are bigger then current, we can set the past how netmask
-        #because in this way we got more agroupments but at cost of IP waste
-        if last_nhost > rg:
-            netmask = i-1
-            break
-        
-        #
-        if rg == 1 or rg == 0:
-            netmask = 32
-            break
+#MAIN
+try:
+    ip_verified = []
+    ips = ordene(catchip(args.file))#RETURN THE LIST OF IPS IN THIS PATH FILE
+    ips_to_verify = []
 
-        last_nhost = rg
-        netmask = i 
+    for ip in ips:
+        netmask = 27
 
-    finished.append(ip(address, netmask))
+        l_nhost = []
+        l_broadcast = ''
+        l_network = ''
 
-for each in finished:
-    print "{}/{}\n".format(each.address, str(each.netmask))
+        while True:
+            data = calculate(ip, netmask)#calculate the subnet in this current netmask
+            n, b = selfbroad(ip, netmask, data['Broadcast'], data['Network'])#verify if the ip haves itself as a broadcast or network
 
-print len(finished)
+            if verbroad(ip):
+                l_nhost = []
+                netmask += 1
+                continue
+
+            #IF THE CURRENT IP HAVE ITSELF AS A BROADCAST OR NETWORK, THE MASK NEEDS TO BE /32 
+            if n or b:
+                netmask = 32
+                verified(ip, netmask, ip, ip+'/'+str(netmask))
+                break
+            
+            nhosts = interval(data['HostMin'], data['HostMax'], ips)
+            if len(nhosts) < len(l_nhost):
+                netmask -= 1
+                verified(ip, netmask, l_broadcast, l_network)
+                break
+
+            if netmask == 32:
+                verified(ip, netmask, ip, ip+'/'+str(netmask))
+                break
+
+            l_nhost = nhosts
+            l_broadcast = data['Broadcast']
+            l_network = data['Network']
+            netmask += 1
+
+    for each in ip_verified:
+        print "\tAddress:\t{}/{}\tNetwork:\t{}\tBroadcast:\t{}".format(each.ip, each.netmask, each.network, each.broadcast)
+except Exception as error:
+    err(str(error))
