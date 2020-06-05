@@ -123,9 +123,9 @@ def output(path):
             for each in ip_verified:
                 file.write("Address:\t{}/{}\tNetwork:\t{}\tBroadcast:\t{}\n".format(each.ip, each.netmask, each.network, each.broadcast))
         
-        print "Output saved in: {}".fomat(path)
-    except:
-        print "Failed to save in file... Printing the output\n"
+        print "Output saved in: {}".format(path)
+    except Exception as error:
+        err(error)
         printing()
 
 def separated(path):
