@@ -16,8 +16,13 @@ try:
     parser.add_argument('-f', '--file', help='Path to file with the list of IPS', required=True)
     parser.add_argument('-o', '--output', help='Path of file to output', action='store', default=None)
     parser.add_argument('-v', '--verbose', help='Increase the verbosity of program', action='store_true')
+    parser.add_argument('-so', '--separatedOutput', help='Makes an output separated in 3 archives', action='store_true', dest='so')
 
     args = parser.parse_args()
+
+    if args.so == True and args.output == None:
+        print "You need to set the path where output will be saved with -o (do not include the name of files)"
+        exit(0)
 
 except Exception as error:
     err(str(error))
@@ -107,20 +112,43 @@ def verified(ip, netmask, broadcast, network):
     ip_verified.append(ipform(ip, netmask, broadcast, network))
 
 def err(string):
-    print "Error on module:\n[-] {}\nQuitting...".format(string)
-    sleep(5)
-    exit(0)
+    print "Error on module:\n[-] {}".format(string)
+
 
 def output(path):
-    #try:
+    global ip_verified
+    try:
+
+        with open(path, 'a') as file:
+            for each in ip_verified:
+                file.write("Address:\t{}/{}\tNetwork:\t{}\tBroadcast:\t{}\n".format(each.ip, each.netmask, each.network, each.broadcast))
+        
+        print "Output saved in: {}".fomat(path)
+    except:
+        print "Failed to save in file... Printing the output\n"
+        printing()
+
+def separated(path):
     global ip_verified
 
-    with open(path, 'a') as file:
-        for each in ip_verified:
-            file.write("Address:\t{}/{}\tNetwork:\t{}\tBroadcast:\t{}\n".format(each.ip, each.netmask, each.network, each.broadcast))
-    #except:
-    #    print "Failed to save in file... Printing the output\n"
-    #    printing()
+    try:
+        with open(path+'/addresses.txt', 'a') as file:
+            for each in ip_verified:
+                file.write("{}/{}\n".format(each.ip, each.netmask))
+
+        with open(path+'/broadcast.txt', 'a') as file:
+            for each in ip_verified:
+                file.write("{}\n".format(each.broadcast))
+
+        with open(path+'/network.txt', 'a') as file:
+            for each in ip_verified:
+                file.write("{}\n".format(each.network))
+
+        print "\nOutput saved in {} names: addresses.txt, broadcast.txt, network.txt\n".format(path)
+    except Exception as error:
+        err(str(error))
+        print "Printing"
+        printing()
 
 def printing():
     global ip_verified
@@ -128,56 +156,57 @@ def printing():
     for each in ip_verified:
         print "\tAddress:\t{}/{}\tNetwork:\t{}\tBroadcast:\t{}".format(each.ip, each.netmask, each.network, each.broadcast)
 #MAIN
-try:
-    print "Running..."
-    ip_verified = []
-    ips = ordene(catchip(args.file))#RETURN THE LIST OF IPS IN THIS PATH FILE
-    ips_to_verify = []
 
-    for ip in ips:
-        netmask = 27
+print "Running..."
+ip_verified = []
+ips = ordene(catchip(args.file))#RETURN THE LIST OF IPS IN THIS PATH FILE
+ips_to_verify = []
 
-        l_nhost = []
-        l_broadcast = ''
-        l_network = ''
+for ip in ips:
+    netmask = 27
 
-        while True:
-            data = calculate(ip, netmask)#calculate the subnet in this current netmask
-            n, b = selfbroad(ip, netmask, data['Broadcast'], data['Network'])#verify if the ip haves itself as a broadcast or network
+    l_nhost = []
+    l_broadcast = ''
+    l_network = ''
 
-            if verbroad(ip):
-                l_nhost = []
-                netmask += 1
-                continue
+    while True:
+        data = calculate(ip, netmask)#calculate the subnet in this current netmask
+        n, b = selfbroad(ip, netmask, data['Broadcast'], data['Network'])#verify if the ip haves itself as a broadcast or network
 
-            #IF THE CURRENT IP HAVE ITSELF AS A BROADCAST OR NETWORK, THE MASK NEEDS TO BE /32 
-            if n or b:
-                netmask = 32
-                verified(ip, netmask, ip, ip+'/'+str(netmask))
-                break
-            
-            nhosts = interval(data['HostMin'], data['HostMax'], ips)
-            if len(nhosts) < len(l_nhost):
-                netmask -= 1
-                verified(ip, netmask, l_broadcast, l_network)
-                break
-
-            if netmask == 32:
-                verified(ip, netmask, ip, ip+'/'+str(netmask))
-                break
-
-            l_nhost = nhosts
-            l_broadcast = data['Broadcast']
-            l_network = data['Network']
+        if verbroad(ip):
+            l_nhost = []
             netmask += 1
+            continue
 
-    if args.output == None:
-        printing()
+        #IF THE CURRENT IP HAVE ITSELF AS A BROADCAST OR NETWORK, THE MASK NEEDS TO BE /32 
+        if n or b:
+            netmask = 32
+            verified(ip, netmask, ip, ip+'/'+str(netmask))
+            break
+        
+        nhosts = interval(data['HostMin'], data['HostMax'], ips)
+        if len(nhosts) < len(l_nhost):
+            netmask -= 1
+            verified(ip, netmask, l_broadcast, l_network)
+            break
+
+        if netmask == 32:
+            verified(ip, netmask, ip, ip+'/'+str(netmask))
+            break
+
+        l_nhost = nhosts
+        l_broadcast = data['Broadcast']
+        l_network = data['Network']
+        netmask += 1
+
+if args.output == None:
+    printing()
+else:
+    if args.so == True:
+        separated(args.output)
     else:
         output(args.output)
-        if args.verbose == True:
-            printing()
-        print "Finished..."
 
-except Exception as error:
-    err(str(error))
+    if args.verbose == True:
+        printing()
+    print "Finished..."
