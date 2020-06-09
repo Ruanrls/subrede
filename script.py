@@ -121,7 +121,7 @@ def output(path):
 
         with open(path, 'a') as file:
             for each in ip_verified:
-                file.write("Address:  {}/{}    Network:  {}\tBroadcast:  {}\n".format(each.ip, each.netmask, each.network, each.broadcast))
+                file.write("Address:  {}/{}    Network:  {}  Broadcast:  {}\n".format(each.ip, each.netmask, each.network, each.broadcast))
         
         print "Output saved in: {}".format(path)
     except Exception as error:
