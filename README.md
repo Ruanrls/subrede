@@ -12,4 +12,5 @@ How to use:
 Exemplos de uso:
 
 python script.py -f Desktop/ips.txt -o resolved.txt
+
 python script.py -f Desktop/ips.txt -so -o Desktop/folder
